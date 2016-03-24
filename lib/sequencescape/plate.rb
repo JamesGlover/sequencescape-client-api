@@ -16,9 +16,35 @@ class Sequencescape::Plate < ::Sequencescape::Asset
   include Sequencescape::Behaviour::Qced
 
   has_many :wells
+  has_many :submission_pools
 
   belongs_to :plate_purpose
   composed_of :stock_plate, :class_name => 'Plate'
+
+  module CommentsCreation
+    def create!(attributes = nil)
+      attributes ||= {}
+
+      new({}, false).tap do |comment|
+        api.create(actions.create, { 'comment' => attributes }, Sequencescape::Api::ModifyingHandler.new(comment))
+      end
+    end
+
+  end
+
+  module CurrentVolumeSubstraction
+    def substract_volume!(substracted_volume_value)
+      api.update(actions.update, { 'substract_volume' => substracted_volume_value }, Sequencescape::Api::ModifyingHandler.new(self))
+    end
+
+  end
+  include CurrentVolumeSubstraction
+
+  has_many :comments do
+    include Sequencescape::Plate::CommentsCreation
+    # Horrible hack
+    def update_from_json(json) ; end
+  end
 
   has_many :source_transfers, :class_name => 'Transfer'
   has_many :transfers_to_tubes, :class_name => 'Transfer'
